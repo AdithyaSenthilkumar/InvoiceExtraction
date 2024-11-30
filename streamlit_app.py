@@ -52,7 +52,6 @@ def extract_invoice_data(ocr_text):
 
 # Streamlit app layout
 def main():
-    st.set_page_config(page_title="Invoice Processing System", layout="wide")
     st.title("📄 Invoice Processing System")
     st.write("Upload an invoice PDF to extract structured data using OCR and AI.")
 
