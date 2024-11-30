@@ -2,4 +2,4 @@ streamlit
 python-doctr
 torch
 torchvision
-google-generative-ai
+google-generativeai
