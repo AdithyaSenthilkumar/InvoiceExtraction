@@ -35,8 +35,8 @@ def extract_invoice_data(ocr_text):
     """Use Google Generative AI to extract structured invoice information."""
     prompt = f"""
         Respond with JSON only, without explanations or additional text.
-        Extract supplier name, invoice number, invoice date, total amount,
-        total tax percentage(not null give 0% instead) from the OCR processed text.
+        Extract supplier name, invoice number, invoice date, total amount,supplier gst, vendor name, vendor gst
+        total tax percentage with split(not null give 0% instead) from the OCR processed text.
         No explanation, just json, no backquotes or comments.
         If some fields are unrecognizable, just fill with context or null.
         Verify the total amount with the total in words, words is final.
