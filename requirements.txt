@@ -3,4 +3,4 @@ python-doctr
 torch
 torchvision
 google-generativeai
-cv2
+opencv-python-headless
