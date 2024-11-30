@@ -5,6 +5,9 @@ from doctr.io import DocumentFile
 import google.generativeai as genai
 import json
 
+# Set Streamlit page configuration (must be the first Streamlit command)
+st.set_page_config(page_title="Invoice Processing System", layout="wide")
+
 # Configure environment and generative AI
 os.environ["USE_TORCH"] = "1"
 genai.configure(api_key="AIzaSyCTpICzzPNhtSCSpqHgjRiILaDWu-0C7oo")
@@ -48,7 +51,6 @@ def extract_invoice_data(ocr_text):
 
 # Streamlit app layout
 def main():
-    st.set_page_config(page_title="Invoice Processing System", layout="wide")
     st.title("📄 Invoice Processing System")
     st.write("Upload an invoice PDF to extract structured data using OCR and AI.")
 
