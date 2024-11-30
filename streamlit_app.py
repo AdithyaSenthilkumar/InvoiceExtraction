@@ -34,6 +34,7 @@ def process_pdf(file):
 def extract_invoice_data(ocr_text):
     """Use Google Generative AI to extract structured invoice information."""
     prompt = f"""
+        Respond with JSON only, without explanations or additional text.
         Extract supplier name, invoice number, invoice date, total amount,
         total tax percentage(not null give 0% instead) from the OCR processed text.
         No explanation, just json, no backquotes or comments.
