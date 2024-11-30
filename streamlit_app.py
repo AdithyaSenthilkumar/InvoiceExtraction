@@ -74,7 +74,6 @@ def main():
                 try:
                     invoice_json = json.loads(invoice_data)
                 except json.JSONDecodeError:
-                    st.error("Failed to parse AI response as JSON.")
                     invoice_json = {}
             elif isinstance(invoice_data, dict):
                 invoice_json = invoice_data
