@@ -66,6 +66,8 @@ def main():
 
             # Generate structured invoice data
             invoice_data = extract_invoice_data(ocr_text)
+            st.subheader("🔍 AI Extracted Raw Response")
+            st.text(invoice_data)
             invoice_json = json.loads(invoice_data)
 
             # Display structured data
