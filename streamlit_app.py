@@ -52,6 +52,7 @@ def extract_invoice_data(ocr_text):
 
 # Streamlit app layout
 def main():
+    st.set_page_config(page_title="Invoice Processing System", layout="wide")
     st.title("📄 Invoice Processing System")
     st.write("Upload an invoice PDF to extract structured data using OCR and AI.")
 
@@ -68,11 +69,25 @@ def main():
             invoice_data = extract_invoice_data(ocr_text)
             st.subheader("🔍 AI Extracted Raw Response")
             st.text(invoice_data)
-            invoice_json = json.loads(invoice_data)
+
+            # Handle JSON parsing
+            if isinstance(invoice_data, str):
+                try:
+                    invoice_json = json.loads(invoice_data)
+                except json.JSONDecodeError:
+                    st.error("Failed to parse AI response as JSON.")
+                    invoice_json = {}
+            elif isinstance(invoice_data, dict):
+                invoice_json = invoice_data
+            else:
+                st.error("Unexpected AI response format.")
+                invoice_json = {}
 
             # Display structured data
-            st.subheader("📊 Extracted Invoice Data")
-            st.json(invoice_json)
+            if invoice_json:
+                st.subheader("📊 Extracted Invoice Data")
+                st.json(invoice_json)
+
 
 # Run the Streamlit app
 if __name__ == "__main__":
