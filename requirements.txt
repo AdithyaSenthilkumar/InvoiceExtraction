@@ -1,6 +1,6 @@
+opencv-python-headless
 streamlit
 python-doctr
 torch
 torchvision
 google-generativeai
-opencv-python-headless
