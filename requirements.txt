@@ -4,3 +4,4 @@ python-doctr
 torch
 torchvision
 google-generativeai
+libgl1
