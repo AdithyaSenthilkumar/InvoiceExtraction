@@ -4,10 +4,9 @@ from doctr.models import ocr_predictor
 from doctr.io import DocumentFile
 import google.generativeai as genai
 import json
-import concurrent.futures
 
-# Set Streamlit page configuration
-st.set_page_config(page_title="Batch Invoice Processing System", layout="wide")
+# Set Streamlit page configuration (must be the first Streamlit command)
+st.set_page_config(page_title="Invoice Processing System", layout="wide")
 
 # Configure environment and generative AI
 os.environ["USE_TORCH"] = "1"
@@ -20,7 +19,7 @@ def load_ocr_model():
 
 ocr_model = load_ocr_model()
 
-# Helper functions
+# Define helper functions
 def process_pdf(file):
     """Process the uploaded PDF and extract text using Doctr OCR."""
     doc = DocumentFile.from_pdf(file)
@@ -30,7 +29,7 @@ def process_pdf(file):
         for line in block.lines:
             line_text = ' '.join(word.value for word in line.words)
             recognized_lines.append(line_text)
-    return "\n".join(recognized_lines)
+    return recognized_lines
 
 def extract_invoice_data(ocr_text):
     """Use Google Generative AI to extract structured invoice information."""
@@ -49,37 +48,44 @@ def extract_invoice_data(ocr_text):
     """
     model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(prompt)
-    # Handle potential backticks in the response
-    response_text = response.text.strip('```json').strip('```').strip()
-    return response_text
-
-def process_single_invoice(file):
-    """Process a single invoice and return structured data."""
-    ocr_text = process_pdf(file)
-    raw_response = extract_invoice_data(ocr_text)
-    try:
-        return json.loads(raw_response)
-    except json.JSONDecodeError:
-        return {"error": "Failed to parse JSON", "raw_response": raw_response}
+    return response.text
 
 # Streamlit app layout
 def main():
-    st.title("📄 Batch Invoice Processing System")
-    st.write("Upload multiple invoice PDFs to extract structured data in parallel.")
+    st.title("📄 Invoice Processing System")
+    st.write("Upload an invoice PDF to extract structured data using OCR and AI.")
 
     # File uploader
-    uploaded_files = st.file_uploader("Upload PDFs", type=["pdf"], accept_multiple_files=True)
-    if uploaded_files:
-        with st.spinner("Processing your invoices..."):
-            # Process invoices in parallel
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                results = list(executor.map(process_single_invoice, uploaded_files))
-            
-            # Display results in a table
-            st.subheader("📊 Extracted Invoice Data")
-            st.write("Processed data is displayed in the table below.")
-            if results:
-                st.dataframe(results)
+    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"], accept_multiple_files=False)
+    if uploaded_file:
+        with st.spinner("Processing your invoice..."):
+            # Process the PDF
+            ocr_text = process_pdf(uploaded_file)
+            st.subheader("🔍 OCR Extracted Text")
+            st.text_area("Extracted Text", value="\n".join(ocr_text), height=300)
+
+            # Generate structured invoice data
+            invoice_data = extract_invoice_data(ocr_text)
+            st.subheader("🔍 AI Extracted Raw Response")
+            st.text(invoice_data)
+
+            # Handle JSON parsing
+            if isinstance(invoice_data, str):
+                try:
+                    invoice_json = json.loads(invoice_data)
+                except json.JSONDecodeError:
+                    invoice_json = {}
+            elif isinstance(invoice_data, dict):
+                invoice_json = invoice_data
+            else:
+                st.error("Unexpected AI response format.")
+                invoice_json = {}
+
+            # Display structured data
+            if invoice_json:
+                st.subheader("📊 Extracted Invoice Data")
+                st.json(invoice_json)
+
 
 # Run the Streamlit app
 if __name__ == "__main__":
