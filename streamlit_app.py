@@ -49,18 +49,28 @@ def extract_invoice_data(ocr_text):
     """
     model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(prompt)
-    # Handle potential backticks in the response
-    response_text = response.text.strip('```json').strip('```').strip()
-    return response_text
+    
+    # Display raw response for debugging
+    raw_response = response.text
+    st.write("Debug: Raw AI Response", raw_response)
+    
+    # Clean and parse JSON
+    try:
+        cleaned_response = raw_response.strip('```json').strip('```').strip()
+        return json.loads(cleaned_response)
+    except json.JSONDecodeError as e:
+        st.error(f"JSON parsing failed: {e}")
+        st.write("Debug: Cleaned Response for Manual Validation", cleaned_response)
+        return {"error": "Failed to parse JSON", "raw_response": cleaned_response}
+
 
 def process_single_invoice(file):
     """Process a single invoice and return structured data."""
     ocr_text = process_pdf(file)
     raw_response = extract_invoice_data(ocr_text)
-    try:
-        return json.loads(raw_response)
-    except json.JSONDecodeError:
-        return {"error": "Failed to parse JSON", "raw_response": raw_response}
+    if "error" in raw_response:
+        return {"file_name": file.name, **raw_response}
+    return {"file_name": file.name, **raw_response}
 
 # Streamlit app layout
 def main():
