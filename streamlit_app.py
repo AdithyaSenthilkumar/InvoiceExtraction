@@ -14,7 +14,6 @@ os.environ["USE_TORCH"] = "1"
 genai.configure(api_key="AIzaSyCTpICzzPNhtSCSpqHgjRiILaDWu-0C7oo")
 
 # Initialize Doctr OCR model
-@st.cache_resource
 def load_ocr_model():
     return ocr_predictor(pretrained=True)
 
