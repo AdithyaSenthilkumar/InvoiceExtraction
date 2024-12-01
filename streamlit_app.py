@@ -4,9 +4,9 @@ from doctr.models import ocr_predictor
 from doctr.io import DocumentFile
 import google.generativeai as genai
 import json
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 
-# Set Streamlit page configuration (must be the first Streamlit command)
+# Set Streamlit page configuration
 st.set_page_config(page_title="Batch Invoice Processing System", layout="wide")
 
 # Configure environment and generative AI
@@ -20,80 +20,66 @@ def load_ocr_model():
 
 ocr_model = load_ocr_model()
 
-# Define helper functions
+# Helper functions
 def process_pdf(file):
     """Process the uploaded PDF and extract text using Doctr OCR."""
-    try:
-        doc = DocumentFile.from_pdf(file)
-        results = ocr_model(doc)
-        recognized_lines = []
-        for block in results.pages[0].blocks:
-            for line in block.lines:
-                line_text = ' '.join(word.value for word in line.words)
-                recognized_lines.append(line_text)
-        return "\n".join(recognized_lines)
-    except Exception as e:
-        return f"Error processing PDF: {e}"
+    doc = DocumentFile.from_pdf(file)
+    results = ocr_model(doc)
+    recognized_lines = []
+    for block in results.pages[0].blocks:
+        for line in block.lines:
+            line_text = ' '.join(word.value for word in line.words)
+            recognized_lines.append(line_text)
+    return "\n".join(recognized_lines)
 
 def extract_invoice_data(ocr_text):
     """Use Google Generative AI to extract structured invoice information."""
     prompt = f"""
         Respond with JSON only, without explanations or additional text.
         Extract supplier name, supplier gst, buyer name, buyer gst invoice number, invoice date, total amount.
-        total tax percentage with split (CGST, IGST, SGST) (not null, give 0% instead) from the OCR processed text with % postfix.
+        total tax percentage with split(CGST,IGST,SGST)(not null, give 0% instead) from the OCR processed text with % postfix.
         No explanation, just json, no backquotes or comments.
         If some fields are unrecognizable, just fill with context or null.
         Verify the total amount with the total in words, words is final.
         NOTE:
-        1. Sometimes the total amount may have a prefix of a rupee symbol that is being recognized as '2'.
-        2. For total tax, add up components like SGST, CGST but be careful of duplicates.
-        3. If tax amount is given, calculate the percentage from the total.
+        1. Sometimes the total amount may have a prefix of rupee symbol that is being recognized as '2'
+        2. For total tax, add up components like SGST, CGST but careful of duplicates
+        3. If tax amount is given you calculate the percentage from the total
         The OCR processed Text: {ocr_text}
     """
-    try:
-        response = genai.GenerativeModel("gemini-1.5-flash").generate_content(prompt)
-        raw_response = response.text.strip()
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(prompt)
+    # Handle potential backticks in the response
+    response_text = response.text.strip('```json').strip('```').strip()
+    return response_text
 
-        # Clean the response
-        json_str = raw_response.replace('```json', '').replace('```', '').strip()
-
-        # Parse JSON
-        parsed_data = json.loads(json_str)
-        return parsed_data
-    except json.JSONDecodeError as e:
-        return {"error": f"JSON parsing failed: {e}", "raw_response": raw_response}
-    except Exception as e:
-        return {"error": f"Failed to process AI response: {e}"}
-
-def process_invoice(file):
-    """Process a single invoice and extract data."""
+def process_single_invoice(file):
+    """Process a single invoice and return structured data."""
     ocr_text = process_pdf(file)
-    return extract_invoice_data(ocr_text)
+    raw_response = extract_invoice_data(ocr_text)
+    try:
+        return json.loads(raw_response)
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse JSON", "raw_response": raw_response}
 
 # Streamlit app layout
 def main():
     st.title("📄 Batch Invoice Processing System")
-    st.write("Upload multiple invoice PDFs to extract structured data using OCR and AI.")
+    st.write("Upload multiple invoice PDFs to extract structured data in parallel.")
 
-    # File uploader for batch processing
-    uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
-
+    # File uploader
+    uploaded_files = st.file_uploader("Upload PDFs", type=["pdf"], accept_multiple_files=True)
     if uploaded_files:
-        with st.spinner("Processing invoices..."):
+        with st.spinner("Processing your invoices..."):
             # Process invoices in parallel
-            with ThreadPoolExecutor() as executor:
-                results = list(executor.map(process_invoice, uploaded_files))
-
-            # Display results
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                results = list(executor.map(process_single_invoice, uploaded_files))
+            
+            # Display results in a table
             st.subheader("📊 Extracted Invoice Data")
+            st.write("Processed data is displayed in the table below.")
             if results:
-                for idx, result in enumerate(results):
-                    st.write(f"**Invoice {idx + 1}:**")
-                    if "error" in result:
-                        st.error(result.get("error"))
-                        st.write("Debug Raw Response:", result.get("raw_response", "No raw response available"))
-                    else:
-                        st.json(result)
+                st.dataframe(results)
 
 # Run the Streamlit app
 if __name__ == "__main__":
